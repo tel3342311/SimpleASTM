@@ -1,0 +1,4 @@
+module SimpleASTMPackageTests {
+    header "/Users/sunweihong/Documents/code/simple-simulator/.build/arm64-apple-macosx/debug/SimpleASTMPackageTests.build/SimpleASTMPackageTests-Swift.h"
+    requires objc
+}
