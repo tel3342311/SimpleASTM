@@ -153,11 +153,9 @@ struct TestDataView: View {
                 HStack {
                     TextField("Age (years)", text: $customAge)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .keyboardType(.numberPad)
                     
                     TextField("Weight (kg)", text: $customWeight)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .keyboardType(.decimalPad)
                 }
                 
                 HStack {

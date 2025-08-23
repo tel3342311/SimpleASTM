@@ -1,10 +1,12 @@
 import SwiftUI
 import Combine
+import AppKit
 
 struct StatusMonitorView: View {
-    @ObservableObject var tcpClient: TCPClientService
+    @StateObject private var tcpClient = TCPClientService()
     @State private var isAutoScrollEnabled = true
     @State private var selectedTab = 0
+    @State private var customMessage = ""
     
     var body: some View {
         VStack(spacing: 0) {
@@ -14,10 +16,13 @@ struct StatusMonitorView: View {
             // Real-time status indicators
             realTimeStatusRow
             
+            // Custom message input section
+            customMessageSection
+            
             // Message monitoring tabs
             messageTabs
         }
-        .background(Color(.systemBackground))
+        .background(Color(NSColor.controlBackgroundColor))
     }
     
     // MARK: - Status Header
@@ -130,31 +135,74 @@ struct StatusMonitorView: View {
     
     // MARK: - Status Indicator
     
+    // MARK: - Custom Message Section
+    
+    private var customMessageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Custom Message")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+            
+            HStack(spacing: 12) {
+                TextField("Enter custom message to send", text: $customMessage)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .font(.system(.body, design: .monospaced))
+                
+                Button("Send") {
+                    sendCustomMessage()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(customMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || tcpClient.connectionStatus != .connected)
+                
+                Button("Clear") {
+                    customMessage = ""
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.horizontal)
+        }
+        .padding(.vertical, 12)
+        .background(Color.blue.opacity(0.05))
+    }
+    
     private func statusIndicator(title: String, value: String, color: Color, icon: String) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 4) {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
                     .foregroundColor(color)
-                    .font(.caption)
+                    .font(.subheadline)
                 
                 Text(title)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Text(value)
-                .font(.caption)
+                .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(color)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.1))
-        .cornerRadius(8)
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
+        .background(color.opacity(0.15))
+        .cornerRadius(10)
     }
     
     // MARK: - Helper Methods
+    
+    private func sendCustomMessage() {
+        let trimmedMessage = customMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedMessage.isEmpty, tcpClient.connectionStatus == .connected else { return }
+        
+        // Send raw message via TCP client
+        tcpClient.sendRawMessage(trimmedMessage)
+        
+        // Clear the input after sending
+        customMessage = ""
+    }
     
     private func colorForConnectionStatus(_ status: ConnectionStatus) -> Color {
         switch status {
@@ -311,7 +359,7 @@ struct MessageRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Color(.systemBackground))
+        .background(Color(NSColor.controlBackgroundColor))
         .overlay(
             Rectangle()
                 .fill(Color.gray.opacity(0.2))
@@ -335,7 +383,7 @@ struct MessageRowView: View {
 // MARK: - Protocol Analysis View
 
 struct ProtocolAnalysisView: View {
-    @ObservableObject var tcpClient: TCPClientService
+    let tcpClient: TCPClientService
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -446,5 +494,5 @@ struct ProtocolAnalysisView: View {
 }
 
 #Preview {
-    StatusMonitorView(tcpClient: TCPClientService())
+    StatusMonitorView()
 }

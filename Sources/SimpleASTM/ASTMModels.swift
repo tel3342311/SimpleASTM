@@ -212,13 +212,13 @@ struct ASTMMessage {
 }
 
 // MARK: - Predefined Test Panels
-struct TestPanel {
+struct TestPanel: Hashable {
     let id: String
     let name: String
     let tests: [TestDefinition]
 }
 
-struct TestDefinition {
+struct TestDefinition: Hashable {
     let id: String
     let name: String
     let unit: String

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct LoggingView: View {
     @StateObject private var logger = MessageLogger.shared
@@ -342,7 +343,7 @@ struct LogEntryRow: View {
                 .padding(.bottom, 8)
             }
         }
-        .background(Color(.systemBackground))
+        .background(Color(NSColor.controlBackgroundColor))
         .overlay(
             Rectangle()
                 .fill(Color.gray.opacity(0.2))

@@ -53,9 +53,8 @@ struct MessageDetailView: View {
                 .padding()
             }
             .navigationTitle("Message Details")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button("Done") {
                         isPresented = false
                     }

@@ -1,5 +1,6 @@
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ASTMMessageBuilder.swift
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ASTMModels.swift
+/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/App.swift
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ConnectionSettingsView.swift
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ContentView.swift
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/LoggingView.swift
@@ -8,4 +9,3 @@
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/StatusMonitorView.swift
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/TCPClientService.swift
 /Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/TestDataView.swift
-/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/main.swift

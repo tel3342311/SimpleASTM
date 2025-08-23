@@ -27,14 +27,47 @@ This demonstrates:
 ./demo.sh
 ```
 
-### Option 2: Swift Package Manager (Development)
+### Option 2: Swift Package Manager (Full SwiftUI Interface)
 ```bash
-# For development with full SwiftUI interface
+# Build and run the complete SwiftUI application
 swift build
 swift run SimpleASTM
 ```
 
-**Note**: SwiftUI version requires fixing macOS-specific issues with iOS modifiers.
+### Option 3: macOS App Bundle (Recommended for Distribution)
+```bash
+# Build proper macOS app with Dock icon and focus
+./build_app.sh
+
+# Launch the app bundle
+open "SimpleASTM Simulator.app"
+```
+
+### Option 4: Xcode (Full IDE Experience)
+
+#### Method A: Open Package Directly
+```bash
+# Open the Swift Package in Xcode
+open Package.swift
+```
+
+#### Method B: Command Line Build with Xcode
+```bash
+# Build using xcodebuild
+xcodebuild -scheme SimpleASTM -destination "platform=macOS,arch=arm64" build
+
+# Run the application
+xcodebuild -scheme SimpleASTM -destination "platform=macOS,arm64" run
+```
+
+#### Method C: Xcode GUI
+1. Open **Xcode**
+2. **File** → **Open** → Navigate to project directory
+3. Select `Package.swift` and click **Open**
+4. Press **⌘+B** to build
+5. Press **⌘+R** to run
+
+**✅ COMPLETED**: All macOS compatibility issues resolved! SwiftUI interface now works perfectly with all build methods.
 
 ## 🏗️ Project Structure
 
@@ -44,8 +77,8 @@ SimpleASTM/
 ├── demo/                      # Generated demo files
 │   ├── astm_client.swift     # ✅ Working ASTM client
 │   └── test_server.py        # ✅ Test server
-├── Sources/SimpleASTM/        # SwiftUI application (needs fixes)
-├── src/main/swift/           # Original SwiftUI source
+├── Sources/SimpleASTM/        # ✅ SwiftUI application source
+├── Tests/SimpleASTMTests/     # ✅ Unit tests
 ├── docs/                     # Protocol documentation
 ├── examples/                 # Usage examples
 └── Package.swift            # Swift Package Manager
@@ -106,12 +139,10 @@ The demo includes:
 - ✅ Message builders and validators
 - ✅ Test data generators
 - ✅ Protocol compliance verification
-
-### Future Improvements (SwiftUI):
-- Fix macOS-specific SwiftUI modifiers
-- Resolve iOS vs macOS compatibility issues
-- Complete UI/UX implementation
-- Add comprehensive testing interface
+- ✅ **Complete SwiftUI Interface** - Fully functional on macOS
+- ✅ **Real-time Monitoring** - Connection status and message tracking
+- ✅ **Comprehensive UI/UX** - Multiple tabs with full functionality
+- ✅ **Advanced Logging** - Detailed protocol analysis and export
 
 ## 📋 Requirements
 

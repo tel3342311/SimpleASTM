@@ -31,7 +31,7 @@ struct ContentView: View {
             .padding()
             .navigationTitle("SimpleASTM Simulator")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button("Settings") {
                         showingConnectionSettings = true
                     }

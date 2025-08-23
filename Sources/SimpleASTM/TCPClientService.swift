@@ -107,6 +107,35 @@ class TCPClientService: ObservableObject {
         }
     }
     
+    func sendRawMessage(_ rawMessage: String) {
+        guard connectionStatus == .connected else {
+            updateError("Not connected to server")
+            return
+        }
+        
+        guard !rawMessage.isEmpty else {
+            updateError("Message cannot be empty")
+            return
+        }
+        
+        DispatchQueue.main.async {
+            self.isTransmitting = true
+        }
+        
+        // Send raw message directly (add newline for proper transmission)
+        let messageWithNewline = rawMessage + "\n"
+        sendFrame(messageWithNewline) { [weak self] success in
+            DispatchQueue.main.async {
+                self?.isTransmitting = false
+                if success {
+                    self?.sentMessages.append(rawMessage)
+                } else {
+                    self?.updateError("Failed to send custom message")
+                }
+            }
+        }
+    }
+    
     private func sendMessageFrames(_ message: ASTMMessage) {
         let records = message.buildCompleteMessage()
         
