@@ -104,13 +104,23 @@ struct MessageDetailView: View {
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
             } else {
-                Text(content)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.primary)
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(8)
-                    .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Length: \(content.count) chars")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Text(content.replacingOccurrences(of: "\r", with: ""))
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .textSelection(.enabled)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .cornerRadius(8)
             }
         }
     }
@@ -252,7 +262,10 @@ struct MessageDetailView: View {
                 .font(.headline)
                 .foregroundColor(.primary)
             
-            let completeMessage = message.buildCompleteMessage().joined(separator: "\n")
+            let completeMessageArray = message.buildCompleteMessage()
+            let completeMessage = completeMessageArray
+                .joined(separator: "\n")
+                .replacingOccurrences(of: "\r", with: "")
             
             if completeMessage.isEmpty {
                 Text("No message content available")
@@ -262,13 +275,27 @@ struct MessageDetailView: View {
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
             } else {
-                Text(completeMessage)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Message Length: \(completeMessage.count) characters")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    ScrollView {
+                        Text(completeMessage.isEmpty ? "Empty message content" : completeMessage)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(minHeight: 100, maxHeight: 200)
                     .padding()
                     .background(Color.gray.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                     .cornerRadius(8)
-                    .textSelection(.enabled)
+                }
             }
         }
     }
