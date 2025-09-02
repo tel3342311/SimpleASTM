@@ -89,7 +89,7 @@ struct ASTMHeaderRecord {
         dateFormatter.dateFormat = "yyyyMMddHHmmss"
         let currentTimestamp = dateFormatter.string(from: Date())
         
-        return "H|\\^&|||Skyla Solution^\(softwareVersion)|||||P|1|\(timestamp.isEmpty ? currentTimestamp : timestamp)"
+        return "H|\\^&|||Skyla Solution^\(softwareVersion)|||||P|1|\(timestamp.isEmpty ? currentTimestamp : timestamp)\r"
     }
 }
 
@@ -105,7 +105,7 @@ struct ASTMPatientRecord {
     let ownerName: String
     
     func toASTMString() -> String {
-        return "P|\(sequenceNumber)||\(patientId)||\(patientName)||^\(age)^Year|\(gender)||||||||\(ownerName)|\(species)||\(weight)^Kg||||||||||||||||"
+        return "P|\(sequenceNumber)||\(patientId)||\(patientName)||^\(age)^Year|\(gender)||||||||\(ownerName)|\(species)||\(weight)^Kg||||||||||||||||\r"
     }
 }
 
@@ -123,7 +123,7 @@ struct ASTMOrderRecord {
         dateFormatter.dateFormat = "yyyyMMddHHmmss"
         let currentTimestamp = dateFormatter.string(from: Date())
         
-        return "O|\(sequenceNumber)|\(specimenId)||^^^\(testPanelId)|\(actionCode)|\(timestamp.isEmpty ? currentTimestamp : timestamp)|||||\(reportType)||||||||||||||"
+        return "O|\(sequenceNumber)|\(specimenId)||^^^\(testPanelId)|\(actionCode)|\(timestamp.isEmpty ? currentTimestamp : timestamp)|||||\(reportType)||||||||||||||\r"
     }
 }
 
@@ -142,7 +142,7 @@ struct ASTMResultRecord {
         dateFormatter.dateFormat = "yyyyMMddHHmmss"
         let currentTimestamp = dateFormatter.string(from: Date())
         
-        return "R|\(sequenceNumber)|^^^\(testId)|\(value)|\(unit)|\(referenceRange)|\(flag.rawValue)||||F||\(timestamp.isEmpty ? currentTimestamp : timestamp)"
+        return "R|\(sequenceNumber)|^^^\(testId)|\(value)|\(unit)|\(referenceRange)|\(flag.rawValue)||||F||\(timestamp.isEmpty ? currentTimestamp : timestamp)\r"
     }
 }
 
@@ -154,7 +154,7 @@ struct ASTMCommentRecord {
     let commentSource: String = "G"
     
     func toASTMString() -> String {
-        return "C|\(sequenceNumber)|\(commentType)|\(comment)|\(commentSource)"
+        return "C|\(sequenceNumber)|\(commentType)|\(comment)|\(commentSource)\r"
     }
 }
 
@@ -164,7 +164,7 @@ struct ASTMTerminatorRecord {
     let terminationCode: String = "N" // N = Normal Termination
     
     func toASTMString() -> String {
-        return "L|\(sequenceNumber)|\(terminationCode)"
+        return "L|\(sequenceNumber)|\(terminationCode)\r\n"
     }
 }
 

@@ -1,0 +1,16 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "f2cc8d1ecb70b0a41b2879d5dbceb7158e8bbeeaafcbf98fa4dae6b4429148d1"
+build_start_time: [1755943806, 698569000]
+build_end_time: [1755943810, 800056000]
+inputs:
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ASTMMessageBuilder.swift": [1755888227, 756020389]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ASTMModels.swift": [1755943591, 411902295]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/App.swift": [1755928138, 597243813]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ConnectionSettingsView.swift": [1755928297, 679940137]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/ContentView.swift": [1755940381, 163132342]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/LoggingView.swift": [1755889787, 469016008]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/MessageDetailView.swift": [1755889708, 329136593]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/MessageLogger.swift": [1755888683, 749552540]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/StatusMonitorView.swift": [1755926444, 518461766]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/TCPClientService.swift": [1755943074, 686425473]
+  "/Users/sunweihong/Documents/code/simple-simulator/Sources/SimpleASTM/TestDataView.swift": [1755889725, 438940888]

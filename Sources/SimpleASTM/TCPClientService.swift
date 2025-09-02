@@ -17,6 +17,7 @@ class TCPClientService: ObservableObject {
     // ASTM Protocol State
     private var frameNumber: Int = 1
     private var isEstablished: Bool = false
+    private var pendingACKCallback: ((Bool) -> Void)?
     
     // MARK: - Connection Management
     
@@ -48,7 +49,10 @@ class TCPClientService: ObservableObject {
     }
     
     func disconnect() {
-        sendDisconnectMessage()
+        // Don't send disconnect message if we're not actually connected
+        if connectionStatus == .connected {
+            sendDisconnectMessage()
+        }
         
         connection?.cancel()
         connection = nil
@@ -57,6 +61,8 @@ class TCPClientService: ObservableObject {
             self.connectionStatus = .disconnected
             self.isEstablished = false
             self.frameNumber = 1
+            self.isTransmitting = false
+            self.lastError = nil
         }
     }
     
@@ -96,12 +102,22 @@ class TCPClientService: ObservableObject {
         // Step 1: Send ENQ to establish transmission
         sendControlCharacter(.ENQ) { [weak self] success in
             if success {
-                // Wait for ACK, then send message frames
-                self?.sendMessageFrames(message)
+                // Wait for ACK before sending message frames
+                self?.waitForACK { ackReceived in
+                    if ackReceived {
+                        // ACK received, start sending frames
+                        self?.sendMessageFrames(message)
+                    } else {
+                        DispatchQueue.main.async {
+                            self?.isTransmitting = false
+                            self?.updateError("Did not receive ACK for ENQ")
+                        }
+                    }
+                }
             } else {
                 DispatchQueue.main.async {
                     self?.isTransmitting = false
-                    self?.updateError("Failed to establish transmission")
+                    self?.updateError("Failed to send ENQ")
                 }
             }
         }
@@ -138,28 +154,47 @@ class TCPClientService: ObservableObject {
     
     private func sendMessageFrames(_ message: ASTMMessage) {
         let records = message.buildCompleteMessage()
+        sendNextFrame(records: records, currentIndex: 0)
+    }
+    
+    private func sendNextFrame(records: [String], currentIndex: Int) {
+        guard currentIndex < records.count else {
+            // All frames sent and ACKed, now send EOT
+            sendControlCharacter(.EOT) { [weak self] success in
+                DispatchQueue.main.async {
+                    self?.isTransmitting = false
+                    self?.frameNumber = 1
+                    if !success {
+                        self?.updateError("Failed to send EOT")
+                    }
+                }
+            }
+            return
+        }
         
-        for (index, record) in records.enumerated() {
-            let isLastFrame = (index == records.count - 1)
-            let frame = buildASTMFrame(record: record, frameNumber: frameNumber, isLast: isLastFrame)
-            
-            sendFrame(frame) { [weak self] success in
-                if success {
-                    self?.frameNumber += 1
-                    if isLastFrame {
-                        // Send EOT to end transmission
-                        self?.sendControlCharacter(.EOT) { _ in
-                            DispatchQueue.main.async {
-                                self?.isTransmitting = false
-                                self?.frameNumber = 1
-                            }
+        let record = records[currentIndex]
+        let isLastFrame = (currentIndex == records.count - 1)
+        let frame = buildASTMFrame(record: record, frameNumber: frameNumber, isLast: isLastFrame)
+        
+        sendFrame(frame) { [weak self] success in
+            if success {
+                self?.frameNumber += 1
+                // Wait for ACK before sending next frame
+                self?.waitForACK { ackReceived in
+                    if ackReceived {
+                        // ACK received, send next frame
+                        self?.sendNextFrame(records: records, currentIndex: currentIndex + 1)
+                    } else {
+                        DispatchQueue.main.async {
+                            self?.isTransmitting = false
+                            self?.updateError("Did not receive ACK for frame \(currentIndex + 1)")
                         }
                     }
-                } else {
-                    DispatchQueue.main.async {
-                        self?.isTransmitting = false
-                        self?.updateError("Failed to send frame")
-                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self?.isTransmitting = false
+                    self?.updateError("Failed to send frame \(currentIndex + 1)")
                 }
             }
         }
@@ -183,11 +218,8 @@ class TCPClientService: ObservableObject {
             }
         }
         
-        let checksum = sum & 0xFF
-        let c1 = String(format: "%02X", checksum >> 4)
-        let c2 = String(format: "%02X", checksum & 0x0F)
-        
-        return c1 + c2
+        // ASTM checksum is just 2 hex characters representing the low 8 bits
+        return String(format: "%02X", sum)
     }
     
     // MARK: - Low-Level Communication
@@ -260,12 +292,32 @@ class TCPClientService: ObservableObject {
         }
     }
     
+    private func waitForACK(timeout: TimeInterval = 5.0, completion: @escaping (Bool) -> Void) {
+        pendingACKCallback = completion
+        
+        // Set timeout for ACK
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { [weak self] in
+            if self?.pendingACKCallback != nil {
+                self?.pendingACKCallback?(false) // Timeout
+                self?.pendingACKCallback = nil
+            }
+        }
+    }
+    
     private func handleReceivedMessage(_ message: String) {
         // Handle ACK, NAK, EOT responses
         if message.contains(String(ASTMControlCharacter.ACK.character)) {
             // Received ACK - continue transmission
+            if let callback = pendingACKCallback {
+                pendingACKCallback = nil
+                callback(true)
+            }
         } else if message.contains(String(ASTMControlCharacter.NAK.character)) {
-            // Received NAK - retransmit
+            // Received NAK - retransmit (for now, treat as failed)
+            if let callback = pendingACKCallback {
+                pendingACKCallback = nil
+                callback(false)
+            }
         } else if message.contains(String(ASTMControlCharacter.EOT.character)) {
             // Received EOT - transmission complete
         }
@@ -340,5 +392,22 @@ class TCPClientService: ObservableObject {
         DispatchQueue.main.async {
             self.lastError = nil
         }
+    }
+    
+    // MARK: - Testing/Simulation Methods
+    
+    func simulateReceivedMessage(_ message: String) {
+        DispatchQueue.main.async {
+            self.receivedMessages.append(message)
+        }
+    }
+    
+    func simulateACKResponse() {
+        simulateReceivedMessage("ACK - Message acknowledged")
+    }
+    
+    func simulateResultsResponse() {
+        let mockResponse = "H|\\^&|||Mock Server^1.0.0|||||||||\r\nR|1|^^^GLU|95|mg/dL|70-110|N|||||\r\nL|1|N\r\n"
+        simulateReceivedMessage(mockResponse)
     }
 }

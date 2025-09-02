@@ -146,17 +146,29 @@ C|1|I|SN^Connect|G
 
 **範例：新增**
 ```
-O|1|000040||^^^LiverPanel|N|20220308092241|||||N||||||||||||||
+H|\^&|||skylaDataManager||||||||1394- 97|20180320163950
+P|1||456||pn|||M||||||po|Canine^breed||22^Kg
+O|1|000001||^^^Diagnosis Panel|R|20180320163950|||||N
+L|1|N
 ```
 
 **範例：刪除**
 ```
-O|1|000040||^^^LiverPanel|C|20220308092241|||||N||||||||||||||
+H|\^&|||skylaDataManager||||||||1394-97|20160503160254
+P|1||10001||PatientName||^5^Year|M||||||OwnerName|Canine||16^Kg
+O|1|000001||||20160503160254|||||C
+L|1|N
+
 ```
 
 **範例：狀態回覆**
 ```
-C|1|I|SN^Queued|G
+H|\^&|||skyla Solution^DS01|||||||P|1394- 97|20140320163654
+P|1||456||pn|||M||||||po|Canine^breed||22^Kg
+O|1|000001||^^^Diagnosis Panel||20180320163950
+C|1|I|Queued|G<CR>
+L|1|N<CR>
+
 ```
 
 ---

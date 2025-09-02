@@ -96,12 +96,22 @@ struct MessageDetailView: View {
                 .font(.headline)
                 .foregroundColor(.primary)
             
-            Text(content)
-                .font(.system(.body, design: .monospaced))
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-                .textSelection(.enabled)
+            if content.isEmpty {
+                Text("No content available")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+            } else {
+                Text(content)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                    .textSelection(.enabled)
+            }
         }
     }
     
@@ -244,12 +254,22 @@ struct MessageDetailView: View {
             
             let completeMessage = message.buildCompleteMessage().joined(separator: "\n")
             
-            Text(completeMessage)
-                .font(.system(.caption, design: .monospaced))
-                .padding()
-                .background(Color.black.opacity(0.05))
-                .cornerRadius(8)
-                .textSelection(.enabled)
+            if completeMessage.isEmpty {
+                Text("No message content available")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+            } else {
+                Text(completeMessage)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                    .textSelection(.enabled)
+            }
         }
     }
     

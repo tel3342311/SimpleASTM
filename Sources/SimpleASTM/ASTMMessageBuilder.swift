@@ -180,6 +180,17 @@ class ASTMMessageBuilder: ObservableObject {
             timestamp: ""
         )
         
+        let patient = ASTMPatientRecord(
+            sequenceNumber: 1,
+            patientId: "DDD",
+            patientName: "Single Test",
+            age: "7",
+            gender: "M",
+            species: "Canine",
+            weight: "20",
+            ownerName: "SingleOwner"
+        )
+        
         let order = ASTMOrderRecord(
             sequenceNumber: 1,
             specimenId: specimenId,
@@ -193,7 +204,7 @@ class ASTMMessageBuilder: ObservableObject {
         return ASTMMessage(
             messageType: .workList,
             header: header,
-            patient: nil,
+            patient: patient,
             orders: [order],
             results: [],
             comments: [],

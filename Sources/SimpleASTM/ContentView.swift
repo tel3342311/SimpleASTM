@@ -23,6 +23,9 @@ struct ContentView: View {
                 // Message sending section
                 messageSendingSection
                 
+                // Testing section
+                testingSection
+                
                 // Status monitoring
                 statusMonitoringSection
                 
@@ -133,18 +136,19 @@ struct ContentView: View {
                 Button(action: {
                     if tcpClient.connectionStatus == .connected {
                         tcpClient.disconnect()
+                    } else if tcpClient.connectionStatus == .connecting {
+                        tcpClient.disconnect()  // Cancel connection attempt
                     } else {
                         connectToServer()
                     }
                 }) {
-                    Text(tcpClient.connectionStatus == .connected ? "Disconnect" : "Connect")
+                    Text(buttonText)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                         .frame(width: 100, height: 36)
-                        .background(tcpClient.connectionStatus == .connected ? Color.red : Color.blue)
+                        .background(buttonColor)
                         .cornerRadius(8)
                 }
-                .disabled(tcpClient.connectionStatus == .connecting)
             }
         }
         .padding()
@@ -239,6 +243,70 @@ struct ContentView: View {
         .cornerRadius(12)
     }
     
+    // MARK: - Testing Section
+    
+    private var testingSection: some View {
+        VStack(spacing: 15) {
+            HStack {
+                Text("Testing & Simulation")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Text("Demo Mode")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            }
+            
+            HStack(spacing: 12) {
+                Button("Simulate ACK") {
+                    tcpClient.simulateACKResponse()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                
+                Button("Simulate Results") {
+                    tcpClient.simulateResultsResponse()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                
+                Button("Simulate Custom") {
+                    tcpClient.simulateReceivedMessage("Custom test response: OK")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                
+                Spacer()
+            }
+            
+            Text("Use these buttons to test the received messages functionality")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.05))
+        .cornerRadius(12)
+    }
+    
+    // MARK: - Helper Properties
+    
+    private var buttonText: String {
+        switch tcpClient.connectionStatus {
+        case .connected: return "Disconnect"
+        case .connecting: return "Cancel"
+        case .disconnected, .error: return "Connect"
+        }
+    }
+    
+    private var buttonColor: Color {
+        switch tcpClient.connectionStatus {
+        case .connected: return .red
+        case .connecting: return .orange
+        case .disconnected, .error: return .blue
+        }
+    }
+    
     // MARK: - Helper Methods
     
     private func colorForStatus(_ status: ConnectionStatus) -> Color {
@@ -293,10 +361,24 @@ struct MessageHistoryTab: View {
                 .foregroundColor(color)
             
             if messages.isEmpty {
-                Text("No messages")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 8) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(color.opacity(0.6))
+                    
+                    Text("No messages")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    if title.contains("Received") {
+                        Text("Received messages from the server will appear here.\nConnect to a server and send messages to see responses.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 4) {

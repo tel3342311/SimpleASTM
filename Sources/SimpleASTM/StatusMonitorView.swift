@@ -7,6 +7,8 @@ struct StatusMonitorView: View {
     @State private var isAutoScrollEnabled = true
     @State private var selectedTab = 0
     @State private var customMessage = ""
+    @State private var searchText = ""
+    @State private var showingExportOptions = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +25,13 @@ struct StatusMonitorView: View {
             messageTabs
         }
         .background(Color(NSColor.controlBackgroundColor))
+        .sheet(isPresented: $showingExportOptions) {
+            ExportOptionsView(
+                sentMessages: tcpClient.sentMessages,
+                receivedMessages: tcpClient.receivedMessages,
+                isPresented: $showingExportOptions
+            )
+        }
     }
     
     // MARK: - Status Header
@@ -42,11 +51,28 @@ struct StatusMonitorView: View {
             Spacer()
             
             HStack(spacing: 12) {
+                // Search field
+                TextField("Search messages...", text: $searchText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(width: 150)
+                    .font(.caption)
+                
                 Toggle("Auto-scroll", isOn: $isAutoScrollEnabled)
                     .font(.caption)
                 
+                Button("Export") {
+                    showingExportOptions = true
+                }
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .foregroundColor(.blue)
+                .cornerRadius(6)
+                
                 Button("Clear All") {
                     tcpClient.clearMessages()
+                    searchText = ""
                 }
                 .font(.caption)
                 .padding(.horizontal, 12)
@@ -105,7 +131,8 @@ struct StatusMonitorView: View {
                 messages: tcpClient.sentMessages,
                 color: .blue,
                 icon: "arrow.up.circle.fill",
-                autoScroll: isAutoScrollEnabled
+                autoScroll: isAutoScrollEnabled,
+                searchText: searchText
             )
             .tabItem {
                 Label("Sent", systemImage: "arrow.up.circle")
@@ -117,7 +144,8 @@ struct StatusMonitorView: View {
                 messages: tcpClient.receivedMessages,
                 color: .green,
                 icon: "arrow.down.circle.fill",
-                autoScroll: isAutoScrollEnabled
+                autoScroll: isAutoScrollEnabled,
+                searchText: searchText
             )
             .tabItem {
                 Label("Received", systemImage: "arrow.down.circle")
@@ -222,6 +250,17 @@ struct MessageListView: View {
     let color: Color
     let icon: String
     let autoScroll: Bool
+    let searchText: String
+    
+    private var filteredMessages: [String] {
+        if searchText.isEmpty {
+            return messages
+        } else {
+            return messages.filter { message in
+                message.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -235,21 +274,34 @@ struct MessageListView: View {
                 
                 Spacer()
                 
-                Text("\(messages.count)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(color.opacity(0.2))
-                    .cornerRadius(4)
+                HStack(spacing: 4) {
+                    if !searchText.isEmpty && filteredMessages.count != messages.count {
+                        Text("\(filteredMessages.count)/\(messages.count)")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                            .fontWeight(.semibold)
+                    } else {
+                        Text("\(filteredMessages.count)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(color.opacity(0.2))
+                .cornerRadius(4)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
             .background(color.opacity(0.05))
             
             // Message list
-            if messages.isEmpty {
-                emptyStateView
+            if filteredMessages.isEmpty {
+                if messages.isEmpty {
+                    emptyStateView
+                } else {
+                    searchEmptyStateView
+                }
             } else {
                 messageScrollView
             }
@@ -276,24 +328,45 @@ struct MessageListView: View {
         .background(Color.gray.opacity(0.02))
     }
     
+    private var searchEmptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40))
+                .foregroundColor(color.opacity(0.5))
+            
+            Text("No matches found")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Text("Try adjusting your search terms")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.gray.opacity(0.02))
+    }
+    
     private var messageScrollView: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(Array(messages.enumerated()), id: \.offset) { index, message in
+                    ForEach(Array(filteredMessages.enumerated()), id: \.offset) { index, message in
                         MessageRowView(
                             index: index + 1,
                             message: message,
-                            color: color
+                            color: color,
+                            searchText: searchText
                         )
                         .id(index)
                     }
                 }
             }
-            .onChange(of: messages.count) { _ in
-                if autoScroll && !messages.isEmpty {
+            .onChange(of: filteredMessages.count) { _ in
+                if autoScroll && !filteredMessages.isEmpty {
                     withAnimation(.easeOut(duration: 0.3)) {
-                        proxy.scrollTo(messages.count - 1, anchor: .bottom)
+                        proxy.scrollTo(filteredMessages.count - 1, anchor: .bottom)
                     }
                 }
             }
@@ -307,6 +380,7 @@ struct MessageRowView: View {
     let index: Int
     let message: String
     let color: Color
+    let searchText: String
     
     @State private var isExpanded = false
     
@@ -490,6 +564,206 @@ struct ProtocolAnalysisView: View {
         • Frame structure: STX + FN + Text + ETB/ETX + Checksum
         • Control characters: ENQ, ACK, NAK, EOT for handshaking
         """
+    }
+}
+
+// MARK: - Export Options View
+
+struct ExportOptionsView: View {
+    let sentMessages: [String]
+    let receivedMessages: [String]
+    @Binding var isPresented: Bool
+    
+    @State private var exportFormat = "JSON"
+    @State private var includeSentMessages = true
+    @State private var includeReceivedMessages = true
+    @State private var includeTimestamp = true
+    @State private var showingFilePicker = false
+    
+    private let formats = ["JSON", "CSV", "TXT"]
+    
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Export Message History")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Export Format")
+                        .font(.headline)
+                    
+                    Picker("Format", selection: $exportFormat) {
+                        ForEach(formats, id: \.self) { format in
+                            Text(format).tag(format)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Include Messages")
+                        .font(.headline)
+                    
+                    Toggle("Sent Messages (\(sentMessages.count))", isOn: $includeSentMessages)
+                    Toggle("Received Messages (\(receivedMessages.count))", isOn: $includeReceivedMessages)
+                    Toggle("Include Timestamp", isOn: $includeTimestamp)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Export Summary")
+                        .font(.headline)
+                    
+                    Text("Format: \(exportFormat)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Total messages: \(totalMessagesCount)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(8)
+                
+                Spacer()
+                
+                HStack(spacing: 16) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Spacer()
+                    
+                    Button("Export") {
+                        exportMessages()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(totalMessagesCount == 0)
+                }
+            }
+            .padding()
+            .frame(width: 400, height: 500)
+        }
+    }
+    
+    private var totalMessagesCount: Int {
+        var count = 0
+        if includeSentMessages { count += sentMessages.count }
+        if includeReceivedMessages { count += receivedMessages.count }
+        return count
+    }
+    
+    private func exportMessages() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json, .commaSeparatedText, .plainText]
+        panel.nameFieldStringValue = "astm_messages_\(getCurrentDateString()).\(exportFormat.lowercased())"
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                do {
+                    let content = generateExportContent()
+                    try content.write(to: url, atomically: true, encoding: .utf8)
+                    DispatchQueue.main.async {
+                        self.isPresented = false
+                    }
+                } catch {
+                    print("Export failed: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func generateExportContent() -> String {
+        switch exportFormat {
+        case "JSON":
+            return generateJSONContent()
+        case "CSV":
+            return generateCSVContent()
+        case "TXT":
+            return generateTXTContent()
+        default:
+            return generateTXTContent()
+        }
+    }
+    
+    private func generateJSONContent() -> String {
+        var jsonData: [String: Any] = [:]
+        
+        if includeTimestamp {
+            jsonData["exported_at"] = getCurrentDateString()
+        }
+        
+        if includeSentMessages {
+            jsonData["sent_messages"] = sentMessages
+        }
+        
+        if includeReceivedMessages {
+            jsonData["received_messages"] = receivedMessages
+        }
+        
+        do {
+            let data = try JSONSerialization.data(withJSONObject: jsonData, options: .prettyPrinted)
+            return String(data: data, encoding: .utf8) ?? ""
+        } catch {
+            return "Error generating JSON: \(error)"
+        }
+    }
+    
+    private func generateCSVContent() -> String {
+        var csv = "Type,Index,Message,Timestamp\n"
+        
+        if includeSentMessages {
+            for (index, message) in sentMessages.enumerated() {
+                let timestamp = includeTimestamp ? getCurrentDateString() : ""
+                csv += "Sent,\(index + 1),\"\(message.replacingOccurrences(of: "\"", with: "\"\""))\",\(timestamp)\n"
+            }
+        }
+        
+        if includeReceivedMessages {
+            for (index, message) in receivedMessages.enumerated() {
+                let timestamp = includeTimestamp ? getCurrentDateString() : ""
+                csv += "Received,\(index + 1),\"\(message.replacingOccurrences(of: "\"", with: "\"\""))\",\(timestamp)\n"
+            }
+        }
+        
+        return csv
+    }
+    
+    private func generateTXTContent() -> String {
+        var content = ""
+        
+        if includeTimestamp {
+            content += "ASTM Message Export - \(getCurrentDateString())\n"
+            content += "=====================================\n\n"
+        }
+        
+        if includeSentMessages && !sentMessages.isEmpty {
+            content += "SENT MESSAGES (\(sentMessages.count))\n"
+            content += "-----------------\n"
+            for (index, message) in sentMessages.enumerated() {
+                content += "\(index + 1). \(message)\n"
+            }
+            content += "\n"
+        }
+        
+        if includeReceivedMessages && !receivedMessages.isEmpty {
+            content += "RECEIVED MESSAGES (\(receivedMessages.count))\n"
+            content += "---------------------\n"
+            for (index, message) in receivedMessages.enumerated() {
+                content += "\(index + 1). \(message)\n"
+            }
+            content += "\n"
+        }
+        
+        return content
+    }
+    
+    private func getCurrentDateString() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        return formatter.string(from: Date())
     }
 }
 
