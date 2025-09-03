@@ -227,10 +227,11 @@ struct ContentView: View {
                     Label("Sent", systemImage: "arrow.up.circle")
                 }
                 
-                MessageHistoryTab(
+                ReceivedMessagesTab(
                     title: "Received (\(tcpClient.receivedMessages.count))",
                     messages: tcpClient.receivedMessages,
-                    color: .green
+                    color: .green,
+                    tcpClient: tcpClient
                 )
                 .tabItem {
                     Label("Received", systemImage: "arrow.down.circle")
@@ -258,48 +259,23 @@ struct ContentView: View {
                     .foregroundColor(.orange)
             }
             
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Button("Simulate ACK") {
-                        tcpClient.simulateACKResponse()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    
-                    Button("Simulate Results") {
-                        tcpClient.simulateResultsResponse()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    
-                    Button("Simulate Custom") {
-                        tcpClient.simulateReceivedMessage("Custom test response: OK")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    
-                    Spacer()
-                }
+            HStack {
+                Text("Server data simulation moved to 'Received' tab")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .italic()
                 
-                HStack(spacing: 12) {
-                    Button("Server ENQ→ACK→Frames") {
-                        tcpClient.simulateServerInitiatedTransmission()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .foregroundColor(.white)
-                    
-                    Text("Test ENQ-ACK-Frame sequence")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                }
+                Spacer()
+                
+                Image(systemName: "arrow.down.circle")
+                    .foregroundColor(.green)
+                    .font(.caption)
             }
             
-            Text("Use these buttons to test the received messages functionality")
+            Text("All server simulation controls are now available in the 'Received' tab below")
                 .font(.caption2)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
         .padding()
         .background(Color.orange.opacity(0.05))
@@ -420,6 +396,134 @@ struct MessageHistoryTab: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+// MARK: - Received Messages Tab with Server Simulation
+
+struct ReceivedMessagesTab: View {
+    let title: String
+    let messages: [String]
+    let color: Color
+    let tcpClient: TCPClientService
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header with title
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(color)
+            
+            if messages.isEmpty {
+                // Empty state with server simulation controls
+                VStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(color.opacity(0.6))
+                    
+                    Text("No messages received")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Simulate server responses below or connect to a real server")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                    
+                    // Server simulation controls
+                    serverSimulationControls
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 8) {
+                    // Messages list
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(messages.enumerated()), id: \.offset) { index, message in
+                                HStack {
+                                    Text("\(index + 1).")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .frame(width: 30, alignment: .leading)
+                                    
+                                    Text(message)
+                                        .font(.caption)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    // Server simulation controls at bottom
+                    serverSimulationControls
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+    
+    private var serverSimulationControls: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text("Server Data Simulation")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.orange)
+                
+                Spacer()
+            }
+            
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Button("Simulate ACK") {
+                        tcpClient.simulateACKResponse()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    
+                    Button("Simulate Results") {
+                        tcpClient.simulateResultsResponse()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    
+                    Button("Custom Response") {
+                        tcpClient.simulateReceivedMessage("Custom test response: OK")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                    
+                    Spacer()
+                }
+                
+                HStack(spacing: 8) {
+                    Button("Server ENQ→ACK→Frames") {
+                        tcpClient.simulateServerInitiatedTransmission()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.mini)
+                    .foregroundColor(.white)
+                    
+                    Text("Full ASTM sequence")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
     }
 }
 
