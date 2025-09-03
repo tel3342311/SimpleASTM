@@ -237,6 +237,7 @@ class TCPClientService: ObservableObject {
                 }
                 completion(false)
             } else {
+                print("📤 SENT CONTROL CHARACTER: \(char)")
                 DispatchQueue.main.async {
                     self.sentMessages.append("Control: \(char)")
                 }
@@ -259,6 +260,8 @@ class TCPClientService: ObservableObject {
                 }
                 completion(false)
             } else {
+                print("📤 SENT FRAME: \(frame)")
+                print("📏 Frame Length: \(frame.count) bytes")
                 DispatchQueue.main.async {
                     self.sentMessages.append("Frame: \(frame)")
                 }
@@ -273,14 +276,26 @@ class TCPClientService: ObservableObject {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             if let data = data, !data.isEmpty {
                 if let message = String(data: data, encoding: .ascii) {
+                    // Print raw server response to console immediately
+                    print("🔥 REAL SERVER RESPONSE:")
+                    print("📡 Raw Data: \(data.map { String(format: "%02X", $0) }.joined(separator: " "))")
+                    print("📝 ASCII Message: '\(message)'")
+                    print("📏 Length: \(message.count) bytes")
+                    print("⏰ Timestamp: \(Date())")
+                    print("─────────────────────────────────────")
+                    
                     DispatchQueue.main.async {
-                        self?.receivedMessages.append("Received: \(message)")
+                        // Add timestamp and formatting to UI display
+                        let timestamp = DateFormatter().string(from: Date())
+                        let formattedMessage = "[\(timestamp)] Server: \(message)"
+                        self?.receivedMessages.append(formattedMessage)
                         self?.handleReceivedMessage(message)
                     }
                 }
             }
             
             if let error = error {
+                print("❌ RECEIVE ERROR: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self?.updateError("Receive error: \(error.localizedDescription)")
                 }
@@ -305,22 +320,47 @@ class TCPClientService: ObservableObject {
     }
     
     private func handleReceivedMessage(_ message: String) {
+        // Print detailed analysis of server response
+        print("🔍 ANALYZING SERVER RESPONSE:")
+        
         // Handle ACK, NAK, EOT responses
         if message.contains(String(ASTMControlCharacter.ACK.character)) {
+            print("✅ ACK Response - Server acknowledged message")
             // Received ACK - continue transmission
             if let callback = pendingACKCallback {
                 pendingACKCallback = nil
                 callback(true)
             }
         } else if message.contains(String(ASTMControlCharacter.NAK.character)) {
+            print("❌ NAK Response - Server rejected message")
             // Received NAK - retransmit (for now, treat as failed)
             if let callback = pendingACKCallback {
                 pendingACKCallback = nil
                 callback(false)
             }
         } else if message.contains(String(ASTMControlCharacter.EOT.character)) {
+            print("🔚 EOT Response - End of transmission from server")
             // Received EOT - transmission complete
+        } else if message.contains(String(ASTMControlCharacter.ENQ.character)) {
+            print("🔔 ENQ Response - Server requesting transmission")
+        } else if message.contains("H|") {
+            print("📋 ASTM Header Record - Server sending header information")
+            print("   Header Content: \(message)")
+        } else if message.contains("P|") {
+            print("👤 ASTM Patient Record - Server sending patient data")
+            print("   Patient Content: \(message)")
+        } else if message.contains("R|") {
+            print("🧪 ASTM Result Record - Server sending test results")
+            print("   Result Content: \(message)")
+        } else if message.contains("L|") {
+            print("🔚 ASTM Terminator Record - Server ending message")
+            print("   Terminator Content: \(message)")
+        } else {
+            print("📄 Unknown/Custom Server Response:")
+            print("   Content: \(message)")
+            print("   Hex: \(message.data(using: .ascii)?.map { String(format: "%02X", $0) }.joined(separator: " ") ?? "N/A")")
         }
+        print("═════════════════════════════════════")
     }
     
     // MARK: - Connection Status Messages
