@@ -18,6 +18,8 @@ class TCPClientService: ObservableObject {
     private var frameNumber: Int = 1
     private var isEstablished: Bool = false
     private var pendingACKCallback: ((Bool) -> Void)?
+    private var isReceivingFrames: Bool = false
+    private var receivedFrameBuffer: [String] = []
     
     // MARK: - Connection Management
     
@@ -63,6 +65,8 @@ class TCPClientService: ObservableObject {
             self.frameNumber = 1
             self.isTransmitting = false
             self.lastError = nil
+            self.isReceivingFrames = false
+            self.receivedFrameBuffer.removeAll()
         }
     }
     
@@ -343,6 +347,10 @@ class TCPClientService: ObservableObject {
             // Received EOT - transmission complete
         } else if message.contains(String(ASTMControlCharacter.ENQ.character)) {
             print("🔔 ENQ Response - Server requesting transmission")
+            handleServerENQ()
+        } else if message.contains(String(ASTMControlCharacter.STX.character)) {
+            print("📦 ASTM Frame - Server sending data frame")
+            handleIncomingFrame(message)
         } else if message.contains("H|") {
             print("📋 ASTM Header Record - Server sending header information")
             print("   Header Content: \(message)")
@@ -449,5 +457,159 @@ class TCPClientService: ObservableObject {
     func simulateResultsResponse() {
         let mockResponse = "H|\\^&|||Mock Server^1.0.0|||||||||\r\nR|1|^^^GLU|95|mg/dL|70-110|N|||||\r\nL|1|N\r\n"
         simulateReceivedMessage(mockResponse)
+    }
+    
+    func simulateServerInitiatedTransmission() {
+        // Simulate server initiating communication with ENQ
+        print("🎭 SIMULATING: Server initiating transmission with ENQ")
+        simulateReceivedMessage(String(ASTMControlCharacter.ENQ.character))
+        
+        // After a brief delay, simulate server sending frames
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
+            let mockFrame1 = "\(ASTMControlCharacter.STX.character)1H|\\^&|||Server^1.0.0|||||||||\(ASTMControlCharacter.ETB.character)5A\(ASTMControlCharacter.CR.character)\(ASTMControlCharacter.LF.character)"
+            let mockFrame2 = "\(ASTMControlCharacter.STX.character)2R|1|^^^GLU|120|mg/dL|70-110|H|||||\(ASTMControlCharacter.ETX.character)4B\(ASTMControlCharacter.CR.character)\(ASTMControlCharacter.LF.character)"
+            
+            self.simulateReceivedMessage(mockFrame1)
+            
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+                self.simulateReceivedMessage(mockFrame2)
+                
+                // Finally send EOT to complete transmission
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+                    self.simulateReceivedMessage(String(ASTMControlCharacter.EOT.character))
+                }
+            }
+        }
+    }
+    
+    // MARK: - Server-Initiated Communication Handling
+    
+    private func handleServerENQ() {
+        print("💫 Server ENQ detected - Sending ACK to accept transmission")
+        
+        // Reset frame receiving state
+        isReceivingFrames = true
+        receivedFrameBuffer.removeAll()
+        
+        // Send ACK to accept server's transmission request
+        sendControlCharacter(.ACK) { [weak self] success in
+            if success {
+                print("✅ ACK sent successfully - Ready to receive frames")
+                DispatchQueue.main.async {
+                    self?.receivedMessages.append("📤 Sent ACK in response to server ENQ")
+                }
+            } else {
+                print("❌ Failed to send ACK response")
+                DispatchQueue.main.async {
+                    self?.updateError("Failed to send ACK response to server ENQ")
+                    self?.isReceivingFrames = false
+                }
+            }
+        }
+    }
+    
+    private func handleIncomingFrame(_ frame: String) {
+        print("📦 Processing incoming frame from server")
+        
+        guard isReceivingFrames else {
+            print("⚠️ Received frame but not in receiving state - ignoring")
+            return
+        }
+        
+        // Extract frame number and content
+        if let stxIndex = frame.firstIndex(of: ASTMControlCharacter.STX.character) {
+            let afterSTX = frame.index(after: stxIndex)
+            
+            if afterSTX < frame.endIndex {
+                let frameNumberChar = frame[afterSTX]
+                print("📋 Frame Number: \(frameNumberChar)")
+                
+                // Extract content between frame number and ETX/ETB
+                let contentStart = frame.index(after: afterSTX)
+                var contentEnd = frame.endIndex
+                
+                // Find ETX or ETB
+                if let etxIndex = frame.firstIndex(of: ASTMControlCharacter.ETX.character) {
+                    contentEnd = etxIndex
+                    print("🔚 Last frame detected (ETX)")
+                } else if let etbIndex = frame.firstIndex(of: ASTMControlCharacter.ETB.character) {
+                    contentEnd = etbIndex
+                    print("➡️ Intermediate frame detected (ETB)")
+                }
+                
+                if contentStart < contentEnd {
+                    let frameContent = String(frame[contentStart..<contentEnd])
+                    print("📄 Frame Content: \(frameContent)")
+                    
+                    // Store frame content
+                    receivedFrameBuffer.append(frameContent)
+                    
+                    // Send ACK for the received frame
+                    sendControlCharacter(.ACK) { [weak self] success in
+                        if success {
+                            print("✅ ACK sent for frame")
+                            DispatchQueue.main.async {
+                                self?.receivedMessages.append("📤 ACK sent for received frame")
+                            }
+                        } else {
+                            print("❌ Failed to send ACK for frame")
+                            DispatchQueue.main.async {
+                                self?.updateError("Failed to send ACK for received frame")
+                            }
+                        }
+                    }
+                    
+                    // Check if this was the last frame (ETX)
+                    if frame.contains(String(ASTMControlCharacter.ETX.character)) {
+                        completeFrameReception()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func completeFrameReception() {
+        print("🎯 Frame reception complete - Processing received data")
+        
+        // Combine all received frames
+        let completeMessage = receivedFrameBuffer.joined()
+        print("📋 Complete Message: \(completeMessage)")
+        
+        DispatchQueue.main.async {
+            self.receivedMessages.append("📥 Complete Server Message: \(completeMessage)")
+        }
+        
+        // Reset state
+        isReceivingFrames = false
+        receivedFrameBuffer.removeAll()
+        
+        // Parse and display the complete ASTM message
+        parseCompleteASTMMessage(completeMessage)
+    }
+    
+    private func parseCompleteASTMMessage(_ message: String) {
+        print("🔍 Parsing complete ASTM message:")
+        
+        let records = message.components(separatedBy: CharacterSet.newlines).filter { !$0.isEmpty }
+        
+        for (index, record) in records.enumerated() {
+            if record.hasPrefix("H|") {
+                print("   📋 Header Record \(index + 1): \(record)")
+            } else if record.hasPrefix("P|") {
+                print("   👤 Patient Record \(index + 1): \(record)")
+            } else if record.hasPrefix("O|") {
+                print("   📝 Order Record \(index + 1): \(record)")
+            } else if record.hasPrefix("R|") {
+                print("   🧪 Result Record \(index + 1): \(record)")
+            } else if record.hasPrefix("C|") {
+                print("   💬 Comment Record \(index + 1): \(record)")
+            } else if record.hasPrefix("L|") {
+                print("   🔚 Terminator Record \(index + 1): \(record)")
+            } else {
+                print("   ❓ Unknown Record \(index + 1): \(record)")
+            }
+        }
+        
+        print("✅ ASTM message parsing complete")
     }
 }

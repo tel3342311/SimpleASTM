@@ -258,26 +258,43 @@ struct ContentView: View {
                     .foregroundColor(.orange)
             }
             
-            HStack(spacing: 12) {
-                Button("Simulate ACK") {
-                    tcpClient.simulateACKResponse()
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Button("Simulate ACK") {
+                        tcpClient.simulateACKResponse()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    
+                    Button("Simulate Results") {
+                        tcpClient.simulateResultsResponse()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    
+                    Button("Simulate Custom") {
+                        tcpClient.simulateReceivedMessage("Custom test response: OK")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    
+                    Spacer()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
                 
-                Button("Simulate Results") {
-                    tcpClient.simulateResultsResponse()
+                HStack(spacing: 12) {
+                    Button("Server ENQ→ACK→Frames") {
+                        tcpClient.simulateServerInitiatedTransmission()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .foregroundColor(.white)
+                    
+                    Text("Test ENQ-ACK-Frame sequence")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                
-                Button("Simulate Custom") {
-                    tcpClient.simulateReceivedMessage("Custom test response: OK")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                
-                Spacer()
             }
             
             Text("Use these buttons to test the received messages functionality")
